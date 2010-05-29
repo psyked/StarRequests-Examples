@@ -31,7 +31,7 @@
 	<s:Label x="138" y="10" text="Filename:" />
 	<s:Label x="138" y="30" text="Original file size:" />
 	<s:Label x="138" y="50" text="Resampled file size:" />
-	<s:Label x="197" y="10" text="Label" width="114" fontStyle="italic" id="filename" />
-	<s:Label x="237" y="30" text="Label" width="73" fontStyle="italic" id="original_file_size" />
-	<s:Label x="259" y="50" text="Label" width="51" fontStyle="italic" id="resampled_file_size" />
+	<s:Label y="10" text="Label" fontStyle="italic" id="filename"  right="10" left="197"/>
+	<s:Label y="30" text="Label" fontStyle="italic" id="original_file_size"  right="10" left="237"/>
+	<s:Label y="50" text="Label" fontStyle="italic" id="resampled_file_size"  right="10" left="259"/>
 </s:ItemRenderer>

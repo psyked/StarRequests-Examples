@@ -9,7 +9,9 @@
 			import couk.markstar.starrequests.utils.RequestQueueUtil;
 			import couk.psyked.starrequests.requests.GenerateThumbnailBitmapDataRequest;
 			import couk.psyked.starrequests.requests.vo.GenerateThumbnailBitmapDataRequestVO;
-			
+			import couk.psyked.utils.FileSizeFormatter;
+			import couk.psyked.utils.NativeFileUtils;
+
 			import mx.collections.ArrayCollection;
 
 			override protected function childrenCreated():void
@@ -38,6 +40,9 @@
 
 			protected function onLocationSelect( e:Event ):void
 			{
+				dataProvider.removeAll();
+				totalProcessedFileSize = 0;
+				totalSourceFileSize = 0;
 				// clean up the stored reference to the File object used to select the location.
 				fileLocation.removeEventListener( Event.SELECT, onLocationSelect );
 				fileLocation = null;
@@ -52,7 +57,18 @@
 
 			protected function generateQueueForLocation( fileLocation:File ):void
 			{
-				for each ( var f:File in fileLocation.getDirectoryListing())
+				var allFiles:Array;
+
+				if ( !browse_recursive.selected )
+				{
+					allFiles = fileLocation.getDirectoryListing();
+				}
+				else
+				{
+					allFiles = NativeFileUtils.getFilesRecursive( fileLocation.nativePath );
+				}
+
+				for each ( var f:File in allFiles )
 				{
 					var request:IRequest = new GenerateThumbnailBitmapDataRequest( f );
 					request.completedSignal.add( completedListener );
@@ -65,13 +81,27 @@
 				if ( vo.thumbnailByteArray.length )
 				{
 					dataProvider.addItem( vo );
+					totalProcessedFileSize += vo.thumbnailByteArray.length;
+					totalSourceFileSize += vo.originalFile.size;
 				}
+				total_file_size.text = FileSizeFormatter.GetFileSize( totalSourceFileSize );
+				total_reprocessed_size.text = FileSizeFormatter.GetFileSize( totalProcessedFileSize );
 			}
+
+			private var totalProcessedFileSize:Number;
+
+			private var totalSourceFileSize:Number;
 		]]>
 	</fx:Script>
-	<s:Button x="10" y="10" label="Browse..." id="browse_button" />
-	<s:Label y="10" height="21" right="10" left="90" paddingTop="7" id="path_label" />
-	<s:List left="9" right="9" top="39" bottom="9"
+	<s:Button x="66" y="10" label="Browse..." id="browse_button" />
+	<s:Label y="10" height="21" right="10" left="146" paddingTop="7" id="path_label" />
+	<s:List left="9" right="9" top="66" bottom="9"
 			itemRenderer="components.itemrenderers.ImageRenderer" id="preview_list">
 	</s:List>
+	<mx:Image x="10" y="10" source="assets/icons/icon_048.png" width="48" height="48" />
+	<s:Label x="267" y="42" text="Total imported file size:" />
+	<s:CheckBox x="66" y="37" label="Import images from subfolders" id="browse_recursive" />
+	<s:Label x="395" y="42" text="Label" width="69" fontStyle="italic" id="total_file_size" />
+	<s:Label x="478" y="42" text="Total reprocessed file size:" />
+	<s:Label x="627" y="42" text="Label" width="69" fontStyle="italic" id="total_reprocessed_size" />
 </s:WindowedApplication>
