@@ -1,11 +1,12 @@
 package couk.psyked.starrequests.requests
 {
 	import cmodule.jpegencoder.CLibInit;
-
+	
 	import couk.markstar.starrequests.requests.AbstractRequest;
 	import couk.markstar.starrequests.requests.IRequest;
+	import couk.psyked.starrequests.requests.vo.GenerateThumbnailBitmapDataRequestVO;
 	import couk.psyked.utils.BitmapManager;
-
+	
 	import flash.display.BitmapData;
 	import flash.display.Loader;
 	import flash.display.LoaderInfo;
@@ -15,10 +16,10 @@ package couk.psyked.starrequests.requests
 	import flash.filesystem.File;
 	import flash.net.URLRequest;
 	import flash.utils.ByteArray;
-
+	
 	import mx.collections.ArrayCollection;
 	import mx.graphics.ImageSnapshot;
-
+	
 	import org.osflash.signals.ISignal;
 	import org.osflash.signals.Signal;
 
@@ -28,12 +29,12 @@ package couk.psyked.starrequests.requests
 	 * pixel image.  This request will load a specified file and generate a thumbnail version
 	 * of the image to use.  The ByteArray it returns is the JPEG-encoded bitmap data for the
 	 * thumbnail.
-	 * 
+	 *
 	 * Ideally you'd store the thumbnail in a cache file somewhere, to save having to generate
 	 * the thumbnail over and over again.  This class Request makes use of an Alchemy JPEG encoder
 	 * class to do its encoding faster, but makes use of some pure AS3 classes that leverage the
 	 * guts of the Flash Player to resample the bitmap data to the requested size.
-	 * 
+	 *
 	 * If you pass a string of these commands in a syncronous queue it's a real shit for
 	 * memory consumption, but it does clean up after itself when it's done.
 	 */
@@ -45,13 +46,16 @@ package couk.psyked.starrequests.requests
 
 		public function GenerateThumbnailBitmapDataRequest( file:File )
 		{
+			returnObject = new GenerateThumbnailBitmapDataRequestVO();
+			returnObject.originalFile = file;
+
 			var alchemyEncoder:CLibInit = new CLibInit();
 			lib = alchemyEncoder.init();
 
 			baout = new ByteArray();
 
 			_file = file;
-			_completedSignal = new Signal( ByteArray );
+			_completedSignal = new Signal( GenerateThumbnailBitmapDataRequestVO );
 
 			_loader = new Loader();
 			_loader.contentLoaderInfo.addEventListener( ProgressEvent.PROGRESS, progressListener );
@@ -64,6 +68,7 @@ package couk.psyked.starrequests.requests
 			super.send();
 
 			var checkArrayCollection:ArrayCollection = new ArrayCollection( ALLOWED_FILE_TYPES );
+
 			//trace( "_file.extension", _file.extension );
 			//trace( "checkArrayCollection.contains( _file.extension )", checkArrayCollection.contains( _file.extension ));
 
@@ -130,14 +135,20 @@ package couk.psyked.starrequests.requests
 			ba = bmd.getPixels( bmd.rect );
 			ba.position = 0;
 			lib.encodeAsync( alchemyEncodingCompleteFunction, ba, baout, bmd.width, bmd.height, 100 );
+
+			returnObject.thumbnailBitmapData = bmd;
 		}
+
+		internal var returnObject:GenerateThumbnailBitmapDataRequestVO;
 
 		private function alchemyEncodingCompleteFunction( ba:ByteArray ):void
 		{
 			trace( "alchemyEncodingCompleteFunction", ba );
 			_progressSignal.dispatch( 1 );
 
-			_completedSignal.dispatch( ba );
+			returnObject.thumbnailByteArray = ba;
+
+			_completedSignal.dispatch( returnObject );
 			cleanup();
 		}
 

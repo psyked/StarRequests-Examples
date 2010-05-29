@@ -1,10 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:s="library://ns.adobe.com/flex/spark" xmlns:mx="library://ns.adobe.com/flex/mx" autoDrawBackground="true">
-	<mx:Image width="120" height="120" horizontalCenter="0" verticalCenter="0" id="preview_image"
-			  maintainAspectRatio="true" verticalAlign="middle" horizontalAlign="center"
-			  source="{data}">
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:s="library://ns.adobe.com/flex/spark"
+				xmlns:mx="library://ns.adobe.com/flex/mx" autoDrawBackground="true" width="320"
+				height="140">
+	<fx:Script>
+		<![CDATA[
+			import couk.psyked.starrequests.requests.vo.GenerateThumbnailBitmapDataRequestVO;
+			import couk.psyked.utils.FileSizeFormatter;
+
+			override public function set data( value:Object ):void
+			{
+				super.data = value;
+				preview_image.source = typedData.thumbnailByteArray;
+				filename.text = typedData.originalFile.name;
+				original_file_size.text = FileSizeFormatter.GetFileSize( typedData.originalFile.size );
+				resampled_file_size.text = FileSizeFormatter.GetFileSize( typedData.thumbnailByteArray.length );
+			}
+
+			private function get typedData():GenerateThumbnailBitmapDataRequestVO
+			{
+				return data as GenerateThumbnailBitmapDataRequestVO;
+			}
+		]]>
+	</fx:Script>
+	<mx:Image width="120" height="120" verticalCenter="0" id="preview_image"
+			  maintainAspectRatio="true" verticalAlign="middle" horizontalAlign="center" left="10">
 		<mx:filters>
 			<mx:DropShadowFilter color="0x000000" angle="90" distance="2" blurX="10" blurY="10" />
 		</mx:filters>
 	</mx:Image>
+	<s:Label x="138" y="10" text="Filename:" />
+	<s:Label x="138" y="30" text="Original file size:" />
+	<s:Label x="138" y="50" text="Resampled file size:" />
+	<s:Label x="197" y="10" text="Label" width="114" fontStyle="italic" id="filename" />
+	<s:Label x="237" y="30" text="Label" width="73" fontStyle="italic" id="original_file_size" />
+	<s:Label x="259" y="50" text="Label" width="51" fontStyle="italic" id="resampled_file_size" />
 </s:ItemRenderer>
