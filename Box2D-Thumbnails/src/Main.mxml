@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:s="library://ns.adobe.com/flex/spark" xmlns:mx="library://ns.adobe.com/flex/mx" showStatusBar="false">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import Box2D.Common.Math.b2Vec2;
+			import Box2D.Dynamics.b2Body;
+			import Box2D.Dynamics.b2World;
+
+			import couk.markstar.starrequests.requests.IRequest;
+			import couk.markstar.starrequests.utils.RequestQueueAsyncUtil;
+			import couk.markstar.starrequests.utils.RequestQueueUtil;
+			import couk.psyked.box2d.Box2DWorld;
+			import couk.psyked.box2d.utils.Box2DUtils;
+			import couk.psyked.box2d.utils.Box2DWorldOptions;
+			import couk.psyked.starrequests.requests.GenerateThumbnailBitmapDataRequest;
+			import couk.psyked.starrequests.requests.vo.GenerateThumbnailBitmapDataRequestVO;
+			import couk.psyked.utils.FileSizeFormatter;
+			import couk.psyked.utils.NativeFileUtils;
+
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+
+			override protected function childrenCreated():void
+			{
+				super.childrenCreated();
+
+				browse_button.addEventListener( MouseEvent.CLICK, onLocationBrowse );
+
+				/* if ( dataProvider )
+				   {
+				   dataProvider.removeAll();
+				   dataProvider = null;
+				   }
+				 dataProvider = new ArrayCollection(); */
+
+				addEventListener( FlexEvent.CREATION_COMPLETE, onCreationComplete );
+			}
+
+			private var framerate:Number = ( 1000 / 60 );
+
+			protected function onCreationComplete( e:FlexEvent ):void
+			{
+				removeEventListener( FlexEvent.CREATION_COMPLETE, onCreationComplete );
+
+				var options:Box2DWorldOptions = new Box2DWorldOptions( renderer.width, renderer.height, 30, 9.8 );
+				options.setWorldEdges( true, false, false, false );
+				world = Box2DUtils.createBoxedWorld( options );
+				//world.debugDraw = true;
+				world.mouseInteractExclusions = new Array();
+				world.mouseInteraction = true;
+				world.framerateIndependantAnimation = true;
+
+				//world.forEachBody( updateImagePosition );
+				fiaTimer = new Timer( framerate );
+				fiaTimer.addEventListener( TimerEvent.TIMER, onTimer );
+				fiaTimer.start();
+
+				renderer.addChild( world );
+			}
+
+			private function onTimer( e:TimerEvent ):void
+			{
+				world.forEachBody( updateImagePosition );
+			}
+
+			private var fiaTimer:Timer;
+
+			protected function updateImagePosition( body:b2Body ):void
+			{
+				//if ( body.GetUserData() is Bitmap )
+				//{
+				/* var vo:Bitmap = body.GetUserData();
+				   var position:b2Vec2 = body.GetPosition();
+				   vo.scaleX = 1 / CONTENT_SCALE_VAR;
+				   vo.scaleY = 1 / CONTENT_SCALE_VAR;
+				   vo.x = position.x * world.options.scale;
+				   vo.y = position.y * world.options.scale;
+				 vo.rotation = body.GetAngle() * ( 180 / Math.PI ); */
+				var bodyPosition:b2Vec2 = body.GetPosition();
+				var bodyRotation:Number = body.GetAngle();
+				var object:Bitmap = body.GetUserData() as Bitmap;
+
+				if ( object )
+				{
+					if ( !object.visible )
+					{
+						object.visible = true;
+					}
+					object.rotation = 0; // If not, matrix starts wrong.
+					var m:Matrix = object.transform.matrix;
+
+					m.tx = -object.width / 2;
+					m.ty = -object.height / 2;
+
+					//if ( object.rotateWithObject )
+					//{
+					m.rotate( bodyRotation ); // Already in radians
+					//}
+					// Now set the position to the world position
+					m.tx += bodyPosition.x * world.options.scale;
+					m.ty += bodyPosition.y * world.options.scale;
+
+					// ...and set the whole thing at once via the matrix.
+					// ie. Update the sprite.
+					object.transform.matrix = m;
+				}
+				//}
+			}
+
+			protected var world:Box2DWorld;
+
+			internal var fileLocation:File;
+
+			protected function onLocationBrowse( e:Event ):void
+			{
+				fileLocation = new File();
+				fileLocation.addEventListener( Event.SELECT, onLocationSelect );
+				fileLocation.browseForDirectory( "Select a location..." );
+			}
+
+			protected function onLocationSelect( e:Event ):void
+			{
+				//dataProvider.removeAll();
+				// clean up the stored reference to the File object used to select the location.
+				fileLocation.removeEventListener( Event.SELECT, onLocationSelect );
+				fileLocation = null;
+				var selectedLocation:File = ( e.currentTarget as File );
+				generateQueueForLocation( selectedLocation );
+			}
+
+			//protected var dataProvider:ArrayCollection;
+
+			protected var queue:RequestQueueAsyncUtil = new RequestQueueAsyncUtil( 1 );
+
+			protected const CONTENT_SCALE_VAR:int = 4;
+
+			protected function generateQueueForLocation( fileLocation:File ):void
+			{
+				var allFiles:Array;
+
+				allFiles = NativeFileUtils.getFilesRecursive( fileLocation.nativePath );
+
+				for each ( var f:File in allFiles )
+				{
+					var request:IRequest = new GenerateThumbnailBitmapDataRequest( f );
+					request.completedSignal.add( completedListener );
+					queue.addRequest( request );
+				}
+			}
+
+			protected function completedListener( vo:GenerateThumbnailBitmapDataRequestVO ):void
+			{
+				if ( vo.thumbnailByteArray.length )
+				{
+					//dataProvider.addItem( vo );
+					var body:b2Body = world.createRectangle( renderer.width * Math.random(), 0, vo.thumbnailBitmapData.width / CONTENT_SCALE_VAR, vo.thumbnailBitmapData.height / CONTENT_SCALE_VAR, 0 );
+					var _bitmap:Bitmap = new Bitmap( vo.thumbnailBitmapData );
+					_bitmap.width = vo.thumbnailBitmapData.width / ( CONTENT_SCALE_VAR / 2 );
+					_bitmap.height = vo.thumbnailBitmapData.height / ( CONTENT_SCALE_VAR / 2 );
+					_bitmap.visible = false;
+					renderer.addChild( _bitmap );
+					body.SetUserData( _bitmap );
+				}
+			}
+		]]>
+	</fx:Script>
+	<!--<s:Rect top="40" left="10" bottom="10" right="10">
+		 <s:fill>
+		 <s:SolidColor color="0x000000" />
+		 </s:fill>
+		 </s:Rect>-->
+	<mx:UIComponent top="40" left="10" bottom="10" right="10" id="renderer" />
+	<s:Button x="10" y="10" label="Browse..." id="browse_button" />
+</s:WindowedApplication>
