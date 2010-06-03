@@ -29,13 +29,6 @@
 
 				browse_button.addEventListener( MouseEvent.CLICK, onLocationBrowse );
 
-				/* if ( dataProvider )
-				   {
-				   dataProvider.removeAll();
-				   dataProvider = null;
-				   }
-				 dataProvider = new ArrayCollection(); */
-
 				addEventListener( FlexEvent.CREATION_COMPLETE, onCreationComplete );
 			}
 
@@ -48,12 +41,11 @@
 				var options:Box2DWorldOptions = new Box2DWorldOptions( renderer.width, renderer.height, 30, 9.8 );
 				options.setWorldEdges( true, false, false, false );
 				world = Box2DUtils.createBoxedWorld( options );
-				//world.debugDraw = true;
+				world.debugDraw = true;
 				world.mouseInteractExclusions = new Array();
 				world.mouseInteraction = true;
 				world.framerateIndependantAnimation = true;
 
-				//world.forEachBody( updateImagePosition );
 				fiaTimer = new Timer( framerate );
 				fiaTimer.addEventListener( TimerEvent.TIMER, onTimer );
 				fiaTimer.start();
@@ -70,15 +62,6 @@
 
 			protected function updateImagePosition( body:b2Body ):void
 			{
-				//if ( body.GetUserData() is Bitmap )
-				//{
-				/* var vo:Bitmap = body.GetUserData();
-				   var position:b2Vec2 = body.GetPosition();
-				   vo.scaleX = 1 / CONTENT_SCALE_VAR;
-				   vo.scaleY = 1 / CONTENT_SCALE_VAR;
-				   vo.x = position.x * world.options.scale;
-				   vo.y = position.y * world.options.scale;
-				 vo.rotation = body.GetAngle() * ( 180 / Math.PI ); */
 				var bodyPosition:b2Vec2 = body.GetPosition();
 				var bodyRotation:Number = body.GetAngle();
 				var object:Bitmap = body.GetUserData() as Bitmap;
@@ -95,10 +78,8 @@
 					m.tx = -object.width / 2;
 					m.ty = -object.height / 2;
 
-					//if ( object.rotateWithObject )
-					//{
 					m.rotate( bodyRotation ); // Already in radians
-					//}
+
 					// Now set the position to the world position
 					m.tx += bodyPosition.x * world.options.scale;
 					m.ty += bodyPosition.y * world.options.scale;
@@ -123,7 +104,6 @@
 
 			protected function onLocationSelect( e:Event ):void
 			{
-				//dataProvider.removeAll();
 				// clean up the stored reference to the File object used to select the location.
 				fileLocation.removeEventListener( Event.SELECT, onLocationSelect );
 				fileLocation = null;
@@ -131,11 +111,7 @@
 				generateQueueForLocation( selectedLocation );
 			}
 
-			//protected var dataProvider:ArrayCollection;
-
 			protected var queue:RequestQueueAsyncUtil = new RequestQueueAsyncUtil( 1 );
-
-			protected const CONTENT_SCALE_VAR:int = 4;
 
 			protected function generateQueueForLocation( fileLocation:File ):void
 			{
@@ -155,11 +131,10 @@
 			{
 				if ( vo.thumbnailByteArray.length )
 				{
-					//dataProvider.addItem( vo );
-					var body:b2Body = world.createRectangle( renderer.width * Math.random(), 0, vo.thumbnailBitmapData.width / CONTENT_SCALE_VAR, vo.thumbnailBitmapData.height / CONTENT_SCALE_VAR, 0 );
+					var body:b2Body = world.createRectangle( renderer.width * Math.random(), 0, vo.thumbnailBitmapData.width / 2, vo.thumbnailBitmapData.height / 2, 0 );
 					var _bitmap:Bitmap = new Bitmap( vo.thumbnailBitmapData );
-					_bitmap.width = vo.thumbnailBitmapData.width / ( CONTENT_SCALE_VAR / 2 );
-					_bitmap.height = vo.thumbnailBitmapData.height / ( CONTENT_SCALE_VAR / 2 );
+					_bitmap.width = vo.thumbnailBitmapData.width;
+					_bitmap.height = vo.thumbnailBitmapData.height;
 					_bitmap.visible = false;
 					renderer.addChild( _bitmap );
 					body.SetUserData( _bitmap );
@@ -167,11 +142,6 @@
 			}
 		]]>
 	</fx:Script>
-	<!--<s:Rect top="40" left="10" bottom="10" right="10">
-		 <s:fill>
-		 <s:SolidColor color="0x000000" />
-		 </s:fill>
-		 </s:Rect>-->
 	<mx:UIComponent top="40" left="10" bottom="10" right="10" id="renderer" />
 	<s:Button x="10" y="10" label="Browse..." id="browse_button" />
 </s:WindowedApplication>

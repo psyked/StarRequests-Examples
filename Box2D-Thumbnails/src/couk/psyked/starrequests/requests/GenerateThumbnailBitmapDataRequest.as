@@ -1,12 +1,12 @@
 package couk.psyked.starrequests.requests
 {
 	import cmodule.jpegencoder.CLibInit;
-	
+
 	import couk.markstar.starrequests.requests.AbstractRequest;
 	import couk.markstar.starrequests.requests.IRequest;
 	import couk.psyked.starrequests.requests.vo.GenerateThumbnailBitmapDataRequestVO;
 	import couk.psyked.utils.BitmapManager;
-	
+
 	import flash.display.BitmapData;
 	import flash.display.Loader;
 	import flash.display.LoaderInfo;
@@ -16,10 +16,10 @@ package couk.psyked.starrequests.requests
 	import flash.filesystem.File;
 	import flash.net.URLRequest;
 	import flash.utils.ByteArray;
-	
+
 	import mx.collections.ArrayCollection;
 	import mx.graphics.ImageSnapshot;
-	
+
 	import org.osflash.signals.ISignal;
 	import org.osflash.signals.Signal;
 
@@ -130,8 +130,17 @@ package couk.psyked.starrequests.requests
 			heightRatio = 120 / loaderInfo.content.height;
 			ratio = ( widthRatio < heightRatio ) ? widthRatio : heightRatio;
 
-			var bmd:BitmapData = BitmapManager.resampleBitmapData( ImageSnapshot.captureBitmapData( loaderInfo.content ), ratio );
 			var ba:ByteArray = new ByteArray();
+			var bmd:BitmapData;
+
+			if ( ratio < 1 )
+			{
+				bmd = BitmapManager.resampleBitmapData( ImageSnapshot.captureBitmapData( loaderInfo.content ), ratio );
+			}
+			else
+			{
+				bmd = ImageSnapshot.captureBitmapData( loaderInfo.content );
+			}
 			ba = bmd.getPixels( bmd.rect );
 			ba.position = 0;
 			lib.encodeAsync( alchemyEncodingCompleteFunction, ba, baout, bmd.width, bmd.height, 100 );
