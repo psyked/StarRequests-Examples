@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx" minWidth="955" minHeight="600"
+			   creationComplete="onCreationComplete(event)">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import Box2D.Common.Math.b2Vec2;
+			import Box2D.Dynamics.b2Body;
+
+			import com.adobe.webapis.flickr.FlickrService;
+			import com.adobe.webapis.flickr.PagedPhotoList;
+			import com.adobe.webapis.flickr.Photo;
+			import com.adobe.webapis.flickr.PhotoPool;
+			import com.adobe.webapis.flickr.PhotoSize;
+			import com.adobe.webapis.flickr.events.FlickrResultEvent;
+			import com.adobe.webapis.flickr.methodgroups.Photos;
+			import com.adobe.webapis.flickr.methodgroups.helpers.PhotoSearchParams;
+
+			import couk.psyked.box2d.Box2DWorld;
+			import couk.psyked.box2d.utils.Box2DUtils;
+			import couk.psyked.box2d.utils.Box2DWorldOptions;
+
+			import mx.events.FlexEvent;
+
+			private static const KEY:String = "c75395becb55dcc56a3c343963ff953c";
+
+			private static const SECRET:String = "b7cf52fc45484c27";
+
+			private var _service:FlickrService;
+
+			private var _photos:Photos;
+
+			private function onCreationComplete( e:FlexEvent ):void
+			{
+				var options:Box2DWorldOptions = new Box2DWorldOptions( display.width, display.height, 30, 9.8 );
+				options.setWorldEdges( true, false, true, true );
+				world = Box2DUtils.createBoxedWorld( options );
+				world.debugDraw = true;
+				world.mouseInteractExclusions = new Array();
+				world.mouseInteraction = true;
+				world.framerateIndependantAnimation = true;
+
+				display.addChild( world );
+
+				fiaTimer = new Timer( framerate );
+				fiaTimer.addEventListener( TimerEvent.TIMER, onTimer );
+				fiaTimer.start();
+
+				_service = new FlickrService( KEY );
+				_service.secret = SECRET;
+				_service.addEventListener( FlickrResultEvent.PHOTOS_SEARCH, handleSearchResult );
+				_service.addEventListener( FlickrResultEvent.PHOTOS_GET_SIZES, onGetPhotoSizes );
+
+				_photos = new Photos( _service );
+				var params:PhotoSearchParams = new PhotoSearchParams();
+				params.group_id = "562133@N25";
+				params.per_page = 60;
+				_photos.searchWithParamHelper( params );
+				//_photos.search( "", "stormtrooper", "any", "", null, null, null, null, -1, "date-posted-desc", -1, "", 1, 1, 1, "", "", "", "", "", "", "", true, "", "", -1, -1, "", 16 );
+			}
+
+			/* protected function completedListener( vo:GenerateThumbnailBitmapDataRequestVO ):void
+			   {
+			   if ( vo.thumbnailByteArray.length )
+			   {
+			   var body:b2Body = world.createRectangle( renderer.width * Math.random(), 0, vo.thumbnailBitmapData.width / 2, vo.thumbnailBitmapData.height / 2, 0 );
+			   var _bitmap:Bitmap = new Bitmap( vo.thumbnailBitmapData );
+			   _bitmap.width = vo.thumbnailBitmapData.width;
+			   _bitmap.height = vo.thumbnailBitmapData.height;
+			   _bitmap.visible = false;
+			   renderer.addChild( _bitmap );
+			   body.SetUserData( _bitmap );
+			   }
+			 } */
+
+			private var framerate:Number = ( 1000 / 60 );
+
+			private function onTimer( e:TimerEvent ):void
+			{
+				world.forEachBody( updateImagePosition );
+			}
+
+			private var fiaTimer:Timer;
+
+			protected function updateImagePosition( body:b2Body ):void
+			{
+				var bodyPosition:b2Vec2 = body.GetPosition();
+				var bodyRotation:Number = body.GetAngle();
+				var object:Bitmap = body.GetUserData() as Bitmap;
+
+				if ( object )
+				{
+					if ( !object.visible )
+					{
+						object.visible = true;
+					}
+					object.rotation = 0; // If not, matrix starts wrong.
+					var m:Matrix = object.transform.matrix;
+
+					m.tx = -object.width / 2;
+					m.ty = -object.height / 2;
+
+					m.rotate( bodyRotation ); // Already in radians
+
+					// Now set the position to the world position
+					m.tx += bodyPosition.x * world.options.scale;
+					m.ty += bodyPosition.y * world.options.scale;
+
+					// ...and set the whole thing at once via the matrix.
+					// ie. Update the sprite.
+					object.transform.matrix = m;
+				}
+				//}
+			}
+
+			protected var world:Box2DWorld;
+
+			private function onGetPhotoSizes( event:FlickrResultEvent ):void
+			{
+				trace( event.data );
+
+				//for each ( var size:PhotoSize in Array( event.data.photoSizes ))
+				var photoSizes:Array = event.data.photoSizes;
+
+				/* for ( var i:int = 0; i < photoSizes.length; i++ )
+				   {
+				   var size:PhotoSize = photoSizes[ i ] as PhotoSize;
+				   //trace( i, ":", event.data[ i ]);
+				   trace( size.width, size.height );
+				 } */
+				//var url:String = 'http://farm' + photo.farmId + '.static.flickr.com/' + photo.server + '/' + photo.id + '_' + photo.secret + '_s.jpg';
+				trace( PhotoSize( photoSizes[ 1 ]).url );
+				var thumb:Thumb = new Thumb( PhotoSize( photoSizes[ 1 ]).url, null );
+				thumb.addEventListener( "allLoaded", position, false, 0, true );
+			}
+
+			private function handleSearchResult( event:FlickrResultEvent ):void
+			{
+
+				var list:Array = PagedPhotoList( event.data.photos ).photos;
+
+				for each ( var photo:Photo in list )
+				{
+					//_photos.getSizes( photo.id );
+
+				//trace( PhotoSize( photoSizes[ 1 ]).url );
+				var url:String = 'http://farm' + photo.farmId + '.static.flickr.com/' + photo.server + '/' + photo.id + '_' + photo.secret + '_t.jpg';
+				var thumb:Thumb = new Thumb( url, photo );
+				thumb.addEventListener( "allLoaded", position, false, 0, true );
+						//thumb.addEventListener( "showCallout", handleShowCallout, false, 0, true );
+						//thumb.addEventListener( "hideCallout", handleHideCallout, false, 0, true );
+						//display.addChild( thumb );
+				}
+			}
+
+			private function position( e:Event ):void
+			{
+				var thumb:Thumb = e.currentTarget as Thumb;
+				thumb.addEventListener( "allLoaded", position, false, 0, true );
+				var body:b2Body = world.createRectangle( display.width * Math.random(), 0, thumb.width / 2, thumb.height / 2, 0 );
+				var _bitmap:Bitmap = new Bitmap( thumb.image.bitmapData );
+				_bitmap.width = thumb.width;
+				_bitmap.height = thumb.height;
+				_bitmap.visible = false;
+				display.addChild( _bitmap );
+				body.SetUserData( _bitmap );
+
+			}
+		]]>
+	</fx:Script>
+	<mx:UIComponent top="10" left="10" bottom="10" right="10" id="display" />
+</s:Application>
