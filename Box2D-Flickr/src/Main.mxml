@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:s="library://ns.adobe.com/flex/spark"
-			   xmlns:mx="library://ns.adobe.com/flex/mx" minWidth="955" minHeight="600"
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="500" height="560"
 			   creationComplete="onCreationComplete(event)">
 	<fx:Declarations>
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
@@ -19,9 +19,14 @@
 			import com.adobe.webapis.flickr.methodgroups.Photos;
 			import com.adobe.webapis.flickr.methodgroups.helpers.PhotoSearchParams;
 
+			import couk.markstar.starrequests.requests.IRequest;
+			import couk.markstar.starrequests.utils.RequestQueueAsyncUtil;
 			import couk.psyked.box2d.Box2DWorld;
 			import couk.psyked.box2d.utils.Box2DUtils;
 			import couk.psyked.box2d.utils.Box2DWorldOptions;
+			import couk.psyked.starrequests.requests.flickr.FlickrPhotoRequest;
+
+			import flashx.textLayout.tlf_internal;
 
 			import mx.events.FlexEvent;
 
@@ -36,7 +41,7 @@
 			private function onCreationComplete( e:FlexEvent ):void
 			{
 				var options:Box2DWorldOptions = new Box2DWorldOptions( display.width, display.height, 30, 9.8 );
-				options.setWorldEdges( true, false, true, true );
+				options.setWorldEdges( true, false, false, false );
 				world = Box2DUtils.createBoxedWorld( options );
 				world.debugDraw = true;
 				world.mouseInteractExclusions = new Array();
@@ -52,29 +57,10 @@
 				_service = new FlickrService( KEY );
 				_service.secret = SECRET;
 				_service.addEventListener( FlickrResultEvent.PHOTOS_SEARCH, handleSearchResult );
-				_service.addEventListener( FlickrResultEvent.PHOTOS_GET_SIZES, onGetPhotoSizes );
 
 				_photos = new Photos( _service );
-				var params:PhotoSearchParams = new PhotoSearchParams();
-				params.group_id = "562133@N25";
-				params.per_page = 60;
-				_photos.searchWithParamHelper( params );
-				//_photos.search( "", "stormtrooper", "any", "", null, null, null, null, -1, "date-posted-desc", -1, "", 1, 1, 1, "", "", "", "", "", "", "", true, "", "", -1, -1, "", 16 );
+				onSearchClick();
 			}
-
-			/* protected function completedListener( vo:GenerateThumbnailBitmapDataRequestVO ):void
-			   {
-			   if ( vo.thumbnailByteArray.length )
-			   {
-			   var body:b2Body = world.createRectangle( renderer.width * Math.random(), 0, vo.thumbnailBitmapData.width / 2, vo.thumbnailBitmapData.height / 2, 0 );
-			   var _bitmap:Bitmap = new Bitmap( vo.thumbnailBitmapData );
-			   _bitmap.width = vo.thumbnailBitmapData.width;
-			   _bitmap.height = vo.thumbnailBitmapData.height;
-			   _bitmap.visible = false;
-			   renderer.addChild( _bitmap );
-			   body.SetUserData( _bitmap );
-			   }
-			 } */
 
 			private var framerate:Number = ( 1000 / 60 );
 
@@ -84,6 +70,8 @@
 			}
 
 			private var fiaTimer:Timer;
+
+			protected var queue:RequestQueueAsyncUtil = new RequestQueueAsyncUtil( 1 );
 
 			protected function updateImagePosition( body:b2Body ):void
 			{
@@ -113,63 +101,56 @@
 					// ie. Update the sprite.
 					object.transform.matrix = m;
 				}
-				//}
 			}
 
 			protected var world:Box2DWorld;
 
-			private function onGetPhotoSizes( event:FlickrResultEvent ):void
-			{
-				trace( event.data );
-
-				//for each ( var size:PhotoSize in Array( event.data.photoSizes ))
-				var photoSizes:Array = event.data.photoSizes;
-
-				/* for ( var i:int = 0; i < photoSizes.length; i++ )
-				   {
-				   var size:PhotoSize = photoSizes[ i ] as PhotoSize;
-				   //trace( i, ":", event.data[ i ]);
-				   trace( size.width, size.height );
-				 } */
-				//var url:String = 'http://farm' + photo.farmId + '.static.flickr.com/' + photo.server + '/' + photo.id + '_' + photo.secret + '_s.jpg';
-				trace( PhotoSize( photoSizes[ 1 ]).url );
-				var thumb:Thumb = new Thumb( PhotoSize( photoSizes[ 1 ]).url, null );
-				thumb.addEventListener( "allLoaded", position, false, 0, true );
-			}
-
 			private function handleSearchResult( event:FlickrResultEvent ):void
 			{
-
 				var list:Array = PagedPhotoList( event.data.photos ).photos;
 
 				for each ( var photo:Photo in list )
 				{
-					//_photos.getSizes( photo.id );
-
-				//trace( PhotoSize( photoSizes[ 1 ]).url );
-				var url:String = 'http://farm' + photo.farmId + '.static.flickr.com/' + photo.server + '/' + photo.id + '_' + photo.secret + '_t.jpg';
-				var thumb:Thumb = new Thumb( url, photo );
-				thumb.addEventListener( "allLoaded", position, false, 0, true );
-						//thumb.addEventListener( "showCallout", handleShowCallout, false, 0, true );
-						//thumb.addEventListener( "hideCallout", handleHideCallout, false, 0, true );
-						//display.addChild( thumb );
+					var request:IRequest = new FlickrPhotoRequest( photo, FlickrPhotoRequest.SIZE_THUMBNAIL );
+					request.completedSignal.add( position );
+					queue.addRequest( request );
 				}
 			}
 
-			private function position( e:Event ):void
+			private function position( bitmap:Bitmap ):void
 			{
-				var thumb:Thumb = e.currentTarget as Thumb;
-				thumb.addEventListener( "allLoaded", position, false, 0, true );
-				var body:b2Body = world.createRectangle( display.width * Math.random(), 0, thumb.width / 2, thumb.height / 2, 0 );
-				var _bitmap:Bitmap = new Bitmap( thumb.image.bitmapData );
-				_bitmap.width = thumb.width;
-				_bitmap.height = thumb.height;
+				var _bitmap:Bitmap = new Bitmap( bitmap.bitmapData );
+				var body:b2Body = world.createRectangle( display.width * Math.random(), 0, _bitmap.width / 2, _bitmap.height / 2, 0 );
 				_bitmap.visible = false;
 				display.addChild( _bitmap );
 				body.SetUserData( _bitmap );
+			}
 
+			protected function onSearchClick( event:Event = null ):void
+			{
+				var params:PhotoSearchParams = new PhotoSearchParams();
+				//params.group_id = "562133@N25";
+				//params.per_page = 10; //60;
+				params.text = search_text.text;
+				params.per_page = search_number.value; //60;
+				_photos.searchWithParamHelper( params );
+				//_photos.search( "", "stormtrooper", "any", "", null, null, null, null, -1, "date-posted-desc", -1, "", 1, 1, 1, "", "", "", "", "", "", "", true, "", "", -1, -1, "", 16 );
 			}
 		]]>
 	</fx:Script>
-	<mx:UIComponent top="10" left="10" bottom="10" right="10" id="display" />
+	<s:BitmapImage source="@Embed('assets/flickr-yahoo-logo.png.v2.png')" right="10" bottom="15" />
+	<s:Label x="241" y="524" text="Powered by" height="16" color="0x999999" />
+	<mx:UIComponent top="42" left="10" bottom="10" right="10" id="display" />
+	<s:Rect bottom="0" left="0" right="0" height="11">
+		<s:fill>
+			<s:SolidColor color="0xCCCCCC" />
+		</s:fill>
+	</s:Rect>
+	<s:Button x="405" y="11" label="Get images" height="23" click="onSearchClick(event)" />
+	<s:TextInput x="84" y="12" width="192" text="stormtroopers" fontStyle="italic" color="#666666"
+				 id="search_text" enter="onSearchClick(event)" />
+	<s:NumericStepper x="343" y="11" fontStyle="italic" color="#666666" value="10" maximum="256"
+					  id="search_number" width="54" />
+	<s:Label x="9" y="18" text="Search term:" height="16" />
+	<s:Label x="284" y="18" text="# images:" width="56" height="16" />
 </s:Application>
