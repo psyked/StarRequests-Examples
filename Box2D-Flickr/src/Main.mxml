@@ -131,7 +131,8 @@
 				var params:PhotoSearchParams = new PhotoSearchParams();
 				//params.group_id = "562133@N25";
 				//params.per_page = 10; //60;
-				params.text = search_text.text;
+				params.tags = search_text.text;
+				//params.text = search_text.text;
 				params.per_page = search_number.value; //60;
 				_photos.searchWithParamHelper( params );
 				//_photos.search( "", "stormtrooper", "any", "", null, null, null, null, -1, "date-posted-desc", -1, "", 1, 1, 1, "", "", "", "", "", "", "", true, "", "", -1, -1, "", 16 );

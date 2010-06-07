@@ -3,3 +3,8 @@ StarRequests
 StarRequestsExample/.*
 Thumbnail-Generator/.*
 Box2D-Thumbnails/.*
+Box2D-Thumbnails/bin-debug/
+Box2D-Thumbnails/bin-debug/*
+Box2D-Flickr/.*
+Box2D-Flickr/bin-debug/
+Box2D-Flickr/bin-debug/*
